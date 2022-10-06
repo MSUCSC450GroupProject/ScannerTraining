@@ -1,3 +1,4 @@
+from statistics import mode
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Model
@@ -30,17 +31,17 @@ def generate_model(input_sz, ker_size, num_classes):
     #L8   = MaxPooling2D(pool_size = 2, padding = 'same')(L7)
     ######### END Feature Extractors ############ 
     
-    L9   = Flatten()(L1)
+    L9   = Flatten()(L2)
     #L9   = Flatten()(L8)
-    L10  = Dense(80, activation = 'relu')(L9)
+    L10  = Dense(256, activation = 'relu')(L9)
     
     L11  = Dropout(rate=0.17)(L10)
     L12  = Dense(num_classes, activation='softmax')(L11)
         
     cnn_model = Model(inputs=inputs, outputs=L12)
         
-    cnn_model.compile(loss=tf.keras.losses.categorical_crossentropy, optimizer=tf.keras.optimizers.Adam(), metrics=['accuracy'])
-    cnn_model.summary() # if needed, try changing tf.keras.optimizers.Adam(learning_rate=0.0001) as it is currently 0.001
+    cnn_model.compile(loss=tf.keras.losses.categorical_crossentropy, optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001), metrics=['accuracy'])
+    cnn_model.summary()
         
     return cnn_model
 #=============================================================================================================================
@@ -91,7 +92,7 @@ test_generator = test_datagen.flow_from_directory(
 
 
 model = generate_model(SHAPE, 5, 2)
-model_checkpoint = ModelCheckpoint(filepath=model_save_path)
+model_checkpoint = ModelCheckpoint(filepath=model_save_path, monitor='val_accuracy', mode='max', save_best_only=True)
 model.fit(train_generator, steps_per_epoch=train_generator.samples/train_generator.batch_size, epochs=400, validation_data=test_generator, callbacks=[model_checkpoint])
 
 test_num = test_generator.samples
