@@ -21,32 +21,42 @@ tf.config.list_physical_devices('GPU')
 data_sitcoms = pd.read_csv("../shared_data/mustard++_text.csv")
 data_sitcoms = data_sitcoms.drop(columns=['SCENE','KEY','END_TIME','SPEAKER','SHOW','Sarcasm_Type','Implicit_Emotion','Explicit_Emotion','Valence','Arousal'], axis=1)
 data_sitcoms = data_sitcoms.rename(columns={'SENTENCE':'text','Sarcasm':'label'})
+#print("data_sitcoms")
+#print(data_sitcoms.info())
 
 # Adjust tweets data
 data_tweets = pd.read_csv("../shared_data/dataset_csv.csv")
 data_tweets = data_tweets.rename(columns={'tweets':'text'})
+#print("data_tweets")
+#print(data_tweets.info())
 
 # Adjust reddit data
 data_reddit = pd.read_csv("../shared_data/train-balanced-sarcasm.csv")
 data_reddit = data_reddit.drop(columns=['author','subreddit','score','ups','downs','date','created_utc','parent_comment'], axis=1)
 data_reddit = data_reddit.rename(columns={'comment':'text'})
 data_reddit = data_reddit.reindex(columns=['text','label'])
+#print("data_reddit")
+#print(data_reddit.info())
 
 # take 10 percent of reddit data
 ten_percent = int(len(data_reddit['text']) * 0.1)
 data_reddit = data_reddit.head(ten_percent)
+#print("data_reddit - 10 percent")
+#print(data_reddit.info())
 
 # Combine 3 datasets
 data = pd.concat([data_tweets,data_sitcoms,data_reddit], ignore_index=True)
 
-# remove non string (nan) rows
+# remove non string and nan rows
 for index, row in data.iterrows():
     if not type(row['text']) == str:
+        data = data.drop(index, axis='index')
+    if math.isnan(row['label']):
         data = data.drop(index, axis='index')
 
 # Shuffle the rows
 data = data.sample(frac=1).reset_index(drop=True)
-
+print("combined data")
 print(data.info())
 
 subset_size = len(data['text'])
