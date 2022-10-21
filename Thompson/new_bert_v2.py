@@ -15,7 +15,7 @@ print(tf.__version__)
 tf.config.run_functions_eagerly(True)
 tf.config.list_physical_devices('GPU')
 
-data_sitcoms = pd.read_csv("./shared_data/mustard++_text.csv")
+data_sitcoms = pd.read_csv("../shared_data/mustard++_text.csv")
 
 # Adjust sitcom data
 data_sitcoms = data_sitcoms.drop(columns=['SCENE','KEY','END_TIME','SPEAKER','SHOW','Sarcasm_Type','Implicit_Emotion','Explicit_Emotion','Valence','Arousal'], axis=1)
@@ -26,20 +26,36 @@ for index, row in data_sitcoms.iterrows():
     if math.isnan(row['label']):
         data_sitcoms = data_sitcoms.drop(index, axis='index')
 
-data_sitcoms.head()
+data_tweets = pd.read_csv("../shared_data/dataset_csv.csv")
 
-data_sitcoms.info()
+# Adjust tweets data
+data_tweets = data_tweets.rename(columns={'tweets':'text'})
+data_tweets.head()
 
-subset_size = 800 ##was 1400
+# Combine all 4 datasets
+#data = pd.concat([data_news_headlines,data_tweets,data_sitcoms,data_reddit], ignore_index=True)
+# Combine 3 datasets
+data = pd.concat([data_tweets,data_sitcoms], ignore_index=True)
+
+# remove non string (nan) rows
+for index, row in data.iterrows():
+    if not type(row['text']) == str:
+        data = data.drop(index, axis='index')
+
+# Shuffle the rows
+data = data.sample(frac=1).reset_index(drop=True)
+
+
+subset_size = len(data['text'])
 testing_size = int(subset_size * 0.4)
 validation_size = int(subset_size * 0.2)
 shuffle_size = subset_size - validation_size
 
-data_batch_size = 2 ##was32
+data_batch_size = 32
 
-data = data_sitcoms.sample(frac=1).reset_index(drop=True) ##was just data
-train_data = data_sitcoms.head(subset_size) ##was just data
-test_data = data_sitcoms.tail(testing_size) ##was just data
+data = data.sample(frac=1).reset_index(drop=True) ##was just data
+train_data = data.head(subset_size) ##was just data
+test_data = data.tail(testing_size) ##was just data
 
 train_ds = tf.data.Dataset.from_tensor_slices(
     (
@@ -62,7 +78,7 @@ test_ds = tf.data.Dataset.from_tensor_slices(
     )
 )
 
-epochs = 5
+epochs = 150
 steps_per_epoch = tf.data.experimental.cardinality(train_ds).numpy()
 num_train_steps = steps_per_epoch * epochs
 num_warmup_steps = int(0.1*num_train_steps)
@@ -116,7 +132,6 @@ text_test = ["Please, keep talking. I always yawn when I am interested."]
 bert_raw_result = classifier_model(tf.constant(text_test))
 print(tf.sigmoid(bert_raw_result))
 
-tf.keras.utils.plot_model(classifier_model)
 
 loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 metrics = tf.metrics.BinaryAccuracy()
@@ -139,7 +154,7 @@ history_dict = history.history
 print(history_dict.keys())
 
 ### Test the model
-loss, accuracy = classifier_model.evaluate(test_ds.batch(2)) ## change batch from 32 to 2
+loss, accuracy = classifier_model.evaluate(test_ds.batch(32)) ## change batch from 32 to 2
 
 print(f'Loss: {loss}')
 print(f'Accuracy: {accuracy}')
@@ -149,54 +164,6 @@ val_acc = history_dict['val_binary_accuracy']
 loss = history_dict['loss']
 val_loss = history_dict['val_loss']
 
-epochs = range(1, len(acc) + 1)
-fig = plt.figure(figsize=(10, 6))
-fig.tight_layout()
 
-plt.subplot(2, 1, 1)
-# r is for "solid red line"
-plt.plot(epochs, loss, 'r', label='Training loss')
-# b is for "solid blue line"
-plt.plot(epochs, val_loss, 'b', label='Validation loss')
-plt.title('Training and validation loss')
-# plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
-
-plt.subplot(2, 1, 2)
-plt.plot(epochs, acc, 'r', label='Training acc')
-plt.plot(epochs, val_acc, 'b', label='Validation acc')
-plt.title('Training and validation accuracy')
-plt.xlabel('Epochs')
-plt.ylabel('Accuracy')
-plt.legend(loc='lower right')
-
-saved_model_path = './model_saves/bert_v1/'
+saved_model_path = './model_saves/bert_v2/'
 classifier_model.save(saved_model_path, include_optimizer=False)
-
-reloaded_model = tf.saved_model.load(saved_model_path)
-
-from tensorflow.python.ops.numpy_ops import np_config
-np_config.enable_numpy_behavior()
-
-def print_my_examples(inputs, results):
-  for i in range(len(inputs)):
-    print('input: ', inputs[i], ' : score: ', results.numpy()[i][0], ' : rounded: ', round(results.numpy()[i][0]))
-  print()
-
-
-examples = [
-    "Please, keep talking. I always yawn when I am interested.", # expect 1
-    "Well, what a surprise.", # expect 1
-    "Really, Sherlock? No! You are clever.", # expect 1
-    "The quick brown fox jumps over the lazy dog", # expect 0
-    "Numerous references to the phrase have occurred in movies, television, and books." # expect 0
-]
-
-reloaded_results = tf.sigmoid(reloaded_model(tf.constant(examples)))
-original_results = tf.sigmoid(classifier_model(tf.constant(examples)))
-
-print('Results from the saved model:')
-print_my_examples(examples, reloaded_results)
-print('Results from the model in memory:')
-print_my_examples(examples, original_results)
