@@ -25,7 +25,6 @@ data_sitcoms = data_sitcoms.rename(columns={'SENTENCE':'text','Sarcasm':'label'}
 # Adjust tweets data
 data_tweets = pd.read_csv("../shared_data/dataset_csv.csv")
 data_tweets = data_tweets.rename(columns={'tweets':'text'})
-data_tweets.head()
 
 # Adjust reddit data
 data_reddit = pd.read_csv("../shared_data/train-balanced-sarcasm.csv")
@@ -48,6 +47,7 @@ for index, row in data.iterrows():
 # Shuffle the rows
 data = data.sample(frac=1).reset_index(drop=True)
 
+print(data.info())
 
 subset_size = len(data['text'])
 testing_size = int(subset_size * 0.4)
@@ -131,11 +131,6 @@ def build_classifier_model():
 
 classifier_model = build_classifier_model()
 
-text_test = ["Please, keep talking. I always yawn when I am interested."]
-bert_raw_result = classifier_model(tf.constant(text_test))
-print(tf.sigmoid(bert_raw_result))
-
-
 loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 metrics = tf.metrics.BinaryAccuracy()
 
@@ -151,22 +146,17 @@ classifier_model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 history = classifier_model.fit(x=train_ds,
                                validation_data=val_ds,
                                epochs=epochs,
-                               callbacks=[WandbCallback()])
+                               callbacks=[WandbCallback(monitor='val_binary_accuracy')])
 
 history_dict = history.history
 print(history_dict.keys())
 
 ### Test the model
-loss, accuracy = classifier_model.evaluate(test_ds.batch(32)) ## change batch from 32 to 2
+loss, accuracy = classifier_model.evaluate(test_ds.batch(data_batch_size)) ## change batch from 32 to 2
 
 print(f'Loss: {loss}')
 print(f'Accuracy: {accuracy}')
 
-acc = history_dict['binary_accuracy']
-val_acc = history_dict['val_binary_accuracy']
-loss = history_dict['loss']
-val_loss = history_dict['val_loss']
 
-
-saved_model_path = './model_saves/bert_v2/'
+saved_model_path = './model_saves/bert_v3/'
 classifier_model.save(saved_model_path, include_optimizer=False)
