@@ -1,6 +1,7 @@
 # BERT model
 
 import math
+import os
 import pandas as pd
 import tensorflow as tf
 import tensorflow_hub as hub
@@ -9,9 +10,9 @@ from official.nlp import optimization
 
 print(tf.__version__)
 
-tf.config.run_functions_eagerly(True)
+#tf.config.run_functions_eagerly(True)
 tf.config.list_physical_devices('GPU')
-
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 
 
 # Adjust sitcom data
@@ -122,7 +123,7 @@ classifier_model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 saved_model_path = '../model_saves/bert_v5/'
 checkpoint = tf.keras.callbacks.ModelCheckpoint(
     filepath=saved_model_path,
-    monitor='val_accuracy',
+    monitor='val_binary_accuracy',
     mode='max',
     save_best_only=True
 )
