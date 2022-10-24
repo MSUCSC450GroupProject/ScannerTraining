@@ -18,14 +18,14 @@ tf.config.run_functions_eagerly(True)
 tf.config.list_physical_devices('GPU')
 
 # Import tweets data
-data_tweets = pd.read_csv('../BERT Model/tweets_dataset.csv')
+data_tweets = pd.read_csv('./shared_data/dataset_csv.csv')
 
 # Adjust tweets data
 data_tweets = data_tweets.rename(columns={'tweets':'text'})
 data_tweets.head()
 
 # Import sitcom data
-data_sitcoms = pd.read_csv('../BERT Model/mustard++_dataset.csv')
+data_sitcoms = pd.read_csv('./shared_data/mustard++_text.csv')
 
 # Adjust sitcom data
 data_sitcoms = data_sitcoms.drop(columns=['SCENE','KEY','END_TIME','SPEAKER','SHOW','Sarcasm_Type','Implicit_Emotion','Explicit_Emotion','Valence','Arousal'], axis=1)
@@ -48,7 +48,7 @@ testing_size = int(subset_size * 0.4) ## 40% testing size
 validation_size = int(subset_size * 0.2) ## 20% validation size
 shuffle_size = subset_size - validation_size ## Shuffle size for shuffling training batch
 
-data_batch_size = 2 ## was32
+data_batch_size = 6 ## was32
 
 data = data.sample(frac=1).reset_index(drop=True) ## was just data
 train_data = data.head(subset_size) ## was just data
@@ -78,7 +78,7 @@ test_ds = tf.data.Dataset.from_tensor_slices(
     )
 )
 
-epochs = 5 ## realistically is much higher
+epochs = 100 ## realistically is much higher
 steps_per_epoch = tf.data.experimental.cardinality(train_ds).numpy()
 num_train_steps = steps_per_epoch * epochs
 num_warmup_steps = int(0.1*num_train_steps)
@@ -138,7 +138,9 @@ print(tf.sigmoid(bert_raw_result))
 ##tf.keras.utils.plot_model(classifier_model)
 
 loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-metrics = tf.metrics.BinaryAccuracy()
+metrics = [tf.metrics.BinaryAccuracy(), tf.keras.metrics.FalsePositives(), 
+            tf.keras.metrics.FalseNegatives(), tf.keras.metrics.TrueNegatives(), 
+            tf.keras.metrics.TruePositives()]
 
 optimizer = optimization.create_optimizer(
     init_lr=init_lr,
@@ -151,28 +153,33 @@ classifier_model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
 history = classifier_model.fit(x=train_ds,
                                validation_data=val_ds,
-                               epochs=epochs    ## callbacks=[WandbCallback()] removed for WandB
-                               )
+                               epochs=epochs)    ## callbacks=[WandbCallback()] removed for WandB
+                               
 
 history_dict = history.history
 print(history_dict.keys())
 
+"""
 ### Test the model
-loss, accuracy = classifier_model.evaluate(test_ds.batch(2)) ## changed batch from 32 to 2
+loss, accuracy = classifier_model.evaluate(test_ds) ## changed batch from 32 to 2
 
 print(f'Loss: {loss}')
 print(f'Accuracy: {accuracy}')
+"""
 
+"""
 acc = history_dict['binary_accuracy']
 val_acc = history_dict['val_binary_accuracy']
 loss = history_dict['loss']
 val_loss = history_dict['val_loss']
+"""
+"""
+epochs = range(1, len(acc) + 1)
+fig = plt.figure(figsize=(10, 6))
+fig.tight_layout()
+"""
 
-##epochs = range(1, len(acc) + 1)
-##fig = plt.figure(figsize=(10, 6))
-##fig.tight_layout()
-
-saved_model_path = './model_saves/bert_v2/'
+saved_model_path = './model_saves/bert_v4/'
 classifier_model.save(saved_model_path, include_optimizer=False)
 
 reloaded_model = tf.saved_model.load(saved_model_path)

@@ -18,14 +18,14 @@ tf.config.run_functions_eagerly(True)
 tf.config.list_physical_devices('GPU')
 
 # Import tweets data
-data_tweets = pd.read_csv('../../shared_data/dataset_csv.csv')
+data_tweets = pd.read_csv('./shared_data/dataset_csv.csv')
 
 # Adjust tweets data
 data_tweets = data_tweets.rename(columns={'tweets':'text'})
 data_tweets.head()
 
 # Import sitcom data
-data_sitcoms = pd.read_csv('../../shared_data/mustard++_text.csv')
+data_sitcoms = pd.read_csv('./shared_data/mustard++_text.csv')
 
 # Adjust sitcom data
 data_sitcoms = data_sitcoms.drop(columns=['SCENE','KEY','END_TIME','SPEAKER','SHOW','Sarcasm_Type','Implicit_Emotion','Explicit_Emotion','Valence','Arousal'], axis=1)
@@ -48,7 +48,7 @@ testing_size = int(subset_size * 0.4) ## 40% testing size
 validation_size = int(subset_size * 0.2) ## 20% validation size
 shuffle_size = subset_size - validation_size ## Shuffle size for shuffling training batch
 
-data_batch_size = 2 ## was32
+data_batch_size = 6 ## was32
 
 data = data.sample(frac=1).reset_index(drop=True) ## was just data
 train_data = data.head(subset_size) ## was just data
@@ -78,14 +78,14 @@ test_ds = tf.data.Dataset.from_tensor_slices(
     )
 )
 
-epochs = 150 ## realistically is much higher
+epochs = 3 ## realistically is much higher
 steps_per_epoch = tf.data.experimental.cardinality(train_ds).numpy()
 num_train_steps = steps_per_epoch * epochs
 num_warmup_steps = int(0.1*num_train_steps)
 init_lr = 3e-5
 
 #define the parameters for tokenizing and padding
-vocab_size = 10000
+vocab_size = 10000  # originally 10000
 embedding_dim = 32
 max_length = 500
 
@@ -143,7 +143,9 @@ print(tf.sigmoid(bert_raw_result))
 
 # Create loss and metrics variables
 loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-metrics = tf.metrics.BinaryAccuracy()
+metrics = [tf.metrics.BinaryAccuracy(), tf.keras.metrics.FalsePositives(), 
+            tf.keras.metrics.FalseNegatives(), tf.keras.metrics.TrueNegatives(), 
+            tf.keras.metrics.TruePositives()]
 
 # Create optimizer
 optimizer = optimization.create_optimizer(
