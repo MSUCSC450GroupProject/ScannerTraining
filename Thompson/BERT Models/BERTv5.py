@@ -2,12 +2,10 @@
 
 import math
 import pandas as pd
-import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow_hub as hub
 import tensorflow_text as text
 from official.nlp import optimization
-
 
 print(tf.__version__)
 
@@ -17,14 +15,14 @@ tf.config.list_physical_devices('GPU')
 
 
 # Adjust sitcom data
-data_sitcoms = pd.read_csv("../shared_data/mustard++_text.csv")
+data_sitcoms = pd.read_csv("../../shared_data/mustard++_text.csv")
 data_sitcoms = data_sitcoms.drop(columns=['SCENE','KEY','END_TIME','SPEAKER','SHOW','Sarcasm_Type','Implicit_Emotion','Explicit_Emotion','Valence','Arousal'], axis=1)
 data_sitcoms = data_sitcoms.rename(columns={'SENTENCE':'text','Sarcasm':'label'})
 #print("data_sitcoms")
 #print(data_sitcoms.info())
 
 # Adjust tweets data
-data_tweets = pd.read_csv("../shared_data/dataset_csv.csv")
+data_tweets = pd.read_csv("../../shared_data/dataset_csv.csv")
 data_tweets = data_tweets.rename(columns={'tweets':'text'})
 #print("data_tweets")
 #print(data_tweets.info())
@@ -87,14 +85,13 @@ vocab_size = 10000
 embedding_dim = 32
 max_length = 500
 
-
 preprocessing_layer = hub.KerasLayer(
-    'https://tfhub.dev/tensorflow/bert_en_cased_preprocess', 
+    'https://tfhub.dev/tensorflow/bert_en_cased_preprocess/3', 
     name='preprocessing'
 )
 
 bert_encoder = hub.KerasLayer(
-    'https://tfhub.dev/tensorflow/bert_en_wwm_cased_L-24_H-1024_A-16', 
+    'https://tfhub.dev/tensorflow/bert_en_wwm_cased_L-24_H-1024_A-16/4', 
     trainable=True, 
     name='BERT_encoder'
 )
@@ -124,7 +121,8 @@ classifier_model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
 history = classifier_model.fit(x=train_ds,
                                validation_data=val_ds,
-                               epochs=epochs)
+                               epochs=epochs,
+                               callbacks=[WandbCallback(monitor='val_binary_accuracy')])
 
 history_dict = history.history
 print(history_dict.keys())
@@ -136,5 +134,5 @@ print(f'Loss: {loss}')
 print(f'Accuracy: {accuracy}')
 
 
-saved_model_path = './model_saves/bert_v4/'
+saved_model_path = '../model_saves/bert_v3/'
 classifier_model.save(saved_model_path, include_optimizer=False)
