@@ -119,10 +119,18 @@ optimizer = optimization.create_optimizer(
 
 classifier_model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
+saved_model_path = '../model_saves/bert_v5/'
+checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    filepath=saved_model_path,
+    monitor='val_accuracy',
+    mode='max',
+    save_best_only=True
+)
+
 history = classifier_model.fit(x=train_ds,
                                validation_data=val_ds,
                                epochs=epochs,
-                               callbacks=[WandbCallback(monitor='val_binary_accuracy')])
+                               callbacks=[checkpoint])
 
 history_dict = history.history
 print(history_dict.keys())
@@ -132,7 +140,3 @@ loss, accuracy = classifier_model.evaluate(test_ds.batch(data_batch_size)) ## ch
 
 print(f'Loss: {loss}')
 print(f'Accuracy: {accuracy}')
-
-
-saved_model_path = '../model_saves/bert_v3/'
-classifier_model.save(saved_model_path, include_optimizer=False)
