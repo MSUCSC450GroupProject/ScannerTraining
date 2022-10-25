@@ -112,7 +112,7 @@ save_checkpoint = tf.keras.callbacks.ModelCheckpoint(
 )
 logger = tf.keras.callbacks.CSVLogger(log_path)
 class StopAtFivePM(tf.keras.callbacks.Callback):
-    def on_epoch_begin(self):
+    def on_epoch_begin(self, epoch, logs=None):
         current_hour = datetime.datetime.now().hour
         if current_hour > 17:
             self.model.stop_training = True
