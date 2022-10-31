@@ -65,7 +65,7 @@ epochs = 500
 
 #define the parameters for tokenizing and padding
 vocab_size = 5000
-embedding_dim = 32
+embedding_dim = 64
 max_length = 500
 
 
@@ -102,13 +102,14 @@ model.compile(loss='binary_crossentropy',optimizer='adam',metrics=['accuracy'])
 model.summary()
 
 ### Model Saving, Logging, and Stopping
-saved_model_path = './model_saves/lstm_v7/'
-log_path = './logs/lstm_v7.csv'
+saved_model_path = './model_saves/lstm_v8/'
+log_path = './logs/lstm_v8.csv'
 save_checkpoint = tf.keras.callbacks.ModelCheckpoint(
     filepath=saved_model_path,
-    monitor='val_accuracy',
-    mode='max',
-    save_best_only=True
+    monitor='loss',
+    mode='min',
+    save_best_only=True,
+    include_optimizer=False
 )
 logger = tf.keras.callbacks.CSVLogger(log_path)
 class StopAtFivePM(tf.keras.callbacks.Callback):
@@ -122,11 +123,7 @@ early_stopper = StopAtFivePM()
 model.fit(x=train_ds, validation_data=val_ds, epochs=epochs,callbacks=[save_checkpoint, logger, early_stopper])
 
 ### Test the model
-loss, accuracy = model.evaluate(test_ds.batch(32))
-
-print(f'Loss: {loss}')
-print(f'Accuracy: {accuracy}')
-
-### Export for inference
-saved_model_path = './model_saves/lstm_v3/'
-model.save(saved_model_path, include_optimizer=False)
+print('\nTesting')
+loss, accuracy = model.evaluate(test_ds.batch(data_batch_size))
+print(f'Testing Loss: {loss}')
+print(f'Testing Accuracy: {accuracy}')
